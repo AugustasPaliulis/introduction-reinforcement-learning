@@ -15,9 +15,10 @@ from test_script import QNetwork
 class PrioritizedReplayBuffer:
     """A simple proportional Prioritized Experience Replay buffer.
 
-    This is a compact implementation suitable for small projects and teaching.
-    It stores transitions in a cyclic buffer and samples indices proportional
-    to priority**alpha. It exposes `add`, `sample`, and `update_priorities`.
+    A small proportional prioritized replay buffer. 
+    Stores transitions in a circular buffer, samples indices proportional to priority**alpha,
+    returns importance-sampling weights for bias correction, 
+    and updates priorities.
     """
     def __init__(self, capacity, alpha=0.6):
         self.capacity = capacity
@@ -27,11 +28,14 @@ class PrioritizedReplayBuffer:
         self.pos = 0
 
     def add(self, state, action, reward, next_state, done):
+        # store cloned tensors to avoid accidental in-place modification
         max_prio = self.priorities.max() if len(self.buffer) > 0 else 1.0
+        s = state.clone() if isinstance(state, torch.Tensor) else state
+        ns = next_state.clone() if isinstance(next_state, torch.Tensor) else next_state
         if len(self.buffer) < self.capacity:
-            self.buffer.append((state, action, reward, next_state, done))
+            self.buffer.append((s, action, reward, ns, done))
         else:
-            self.buffer[self.pos] = (state, action, reward, next_state, done)
+            self.buffer[self.pos] = (s, action, reward, ns, done)
         self.priorities[self.pos] = max_prio
         self.pos = (self.pos + 1) % self.capacity
 
@@ -102,8 +106,15 @@ def deep_q_learning(learning_rate, gamma, episodes, hidden_dim):
     episode_rewards = []
     plot_avg_rewards = []
     
+    # Training across different pole lengths: cycle through a set of lengths per episode
+    pole_lengths = np.linspace(0.4, 1.8, 5)  # small set for training diversity
+
     # Training loop
     for episode in range(episodes):
+        # pick pole length round-robin
+        pole_len = float(pole_lengths[episode % len(pole_lengths)])
+        env.unwrapped.length = pole_len
+
         state, _ = env.reset()
         state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
         episode_reward = 0
@@ -122,9 +133,12 @@ def deep_q_learning(learning_rate, gamma, episodes, hidden_dim):
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
             next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
-            
-            # Store transition in replay buffer
-            replay_buffer.add(state, action, reward, next_state, done)
+            # Scale reward by pole length to emphasize harder tasks
+            # baseline length ~= 0.7 (default CartPole length ~0.5-0.6); use pole_len as multiplier
+            reward_scaled = reward * (pole_len / 0.7)
+
+            # Store transition in replay buffer (store clones to avoid aliasing)
+            replay_buffer.add(state, action, reward_scaled, next_state, done)
             
             state = next_state
             episode_reward += reward
@@ -175,7 +189,9 @@ def train_dqn(q_network, target_network, replay_buffer, optimizer, batch_size, g
     # Next Q values from target network
     with torch.no_grad():
         next_q_values = target_network(next_states).max(1)[0]
-        target_q_values = rewards + (gamma * next_q_values * (~dones))
+        # convert dones to float mask (1.0 for not-done, 0.0 for done)
+        not_done = (~dones).to(dtype=torch.float32)
+        target_q_values = rewards + (gamma * next_q_values * not_done)
 
     # Compute TD errors and weighted loss
     td_errors = target_q_values - current_q_values
