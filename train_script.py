@@ -94,9 +94,11 @@ def deep_q_learning(learning_rate=0.01, gamma=0.99, episodes=500):
         
         # Track average rewards
         if episode % 25 == 0:
-            num_episodes = min(25, len(episode_rewards))
-            avg_reward = sum(episode_rewards[-num_episodes:]) / num_episodes
-            plot_avg_rewards.append(avg_reward)
+            avg_reward = np.mean(episode_rewards[-50:]) if len(episode_rewards) >= 50 else np.mean(episode_rewards)
+            avg_pole_length = np.mean(plot_avg_rewards[-50:]) if len(plot_avg_rewards) >= 50 else np.mean(plot_avg_rewards)
+            #num_episodes = min(25, len(episode_rewards))
+            #avg_reward = sum(episode_rewards[-num_episodes:]) / num_episodes
+            #plot_avg_rewards.append(avg_reward)
             print(f"Episode {episode}, Average Reward: {avg_reward:.2f}, Epsilon: {epsilon:.3f}")
     
     env.close()

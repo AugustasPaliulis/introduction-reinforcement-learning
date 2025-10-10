@@ -91,7 +91,7 @@ def test_script():
     all_results = []
 
     # import here your trained neural network
-    trained_nn = 'base_dqn_weights.pth'
+    trained_nn = 'strategy_adaptive_rewards.pth'
 
     results = {}
     total_score = 0
