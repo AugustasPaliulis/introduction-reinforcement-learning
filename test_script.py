@@ -44,7 +44,7 @@ def bar_plot(results):
     plt.ylabel('Episode length')
     plt.title(f'Average score over all pole lengths = {round(overall_avg, 0)}')
 
-    plt.savefig("bar_plot.png")
+    plt.savefig("bar_plot_for_adaptive_reward_strategy.png")
     plt.show()
 
 
@@ -91,7 +91,7 @@ def test_script():
     all_results = []
 
     # import here your trained neural network
-    trained_nn = 'base_dqn_weights.pth'
+    trained_nn = 'strategy_adaptive_rewards.pth'
 
     results = {}
     total_score = 0
