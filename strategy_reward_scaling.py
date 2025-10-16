@@ -1,13 +1,8 @@
 """
-Baseline DQN Implementation
-============================
-Standard DQN with:
-- Uniform random replay buffer (no prioritization)
-- Epsilon-greedy exploration with decay
-- Target network (periodic updates)
-- Training across multiple pole lengths (for generalization)
-
-This serves as the baseline for comparison with advanced methods.
+Reward Scaling Strategy (Based on Baseline)
+some modifications: Rewards are scaled based on pole length difficulty.
+-Easy poles (near 1.0): Normal rewards
+-Hard poles (0.4, 1.8): Higher rewards
 """
 
 import torch
@@ -350,5 +345,5 @@ if __name__ == "__main__":
     plot_training_curve(
         plot_avg_rewards=plot_avg_rewards,
         method_name="Reward Scaling Strategy",
-        save_path="reward_scaling_strategy_training_curve.png"
+        save_path="results/reward_scaling/reward_scaling_strategy_training_curve.png"
     )
