@@ -143,7 +143,7 @@ def train_baseline_dqn(learning_rate=0.01, gamma=0.99, episodes=500,
     epsilon = epsilon_start
     # For adaptive epsilon based on performance
     reward_window = 50  # Window size for computing average reward
-    target_reward = 70  # CartPole-v1 target reward (adjust as needed)
+    target_reward = 100  # CartPole-v1 target reward
     epsilon_adjustment_rate = 0.05  # How fast epsilon adjusts to performance
 
     # Training tracking
@@ -259,7 +259,7 @@ if __name__ == "__main__":
     plot_training_curve(
         plot_avg_rewards=plot_avg_rewards,
         method_name="Adaptive Epsilon DQN",
-        save_path="results/adaptive_epsilon/adaptive_epsilon_training_curve.png"
+        save_path="results/adaptive_epsilon_new/adaptive_epsilon_training_curve.png"
     )
     
     print("\nAdaptive epsilon training completed")
