@@ -131,7 +131,7 @@ def test_script():
 
     # Convert list to DataFrame
     df = pd.DataFrame(all_results)
-    df.to_excel("experiment_results.xlsx", index=False)
+    df.to_excel("results/reward_scaling/experiment_results.xlsx", index=False)
 
 if __name__ == "__main__":
     test_script()
