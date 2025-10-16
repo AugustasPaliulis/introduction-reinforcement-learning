@@ -167,8 +167,8 @@ def train_baseline_dqn(learning_rate=0.01, gamma=0.99, episodes=500,
                     action = q_values.argmax().item()
             
             # Take action
-            next_state, reward, terminated, truncated, _ = env.step(action)
-            done = terminated or truncated
+            next_state, reward, done, _, __ = env.step(action)
+
             next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
             
             # Store transition (no reward scaling - pure baseline)
