@@ -345,5 +345,5 @@ if __name__ == "__main__":
     plot_training_curve(
         plot_avg_rewards=plot_avg_rewards,
         method_name="Reward Scaling Strategy",
-        save_path="results/reward_scaling/reward_scaling_strategy_training_curve.png"
+        save_path="results/reward_scaling_result/reward_scaling_strategy_training_curve.png"
     )

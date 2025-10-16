@@ -139,5 +139,5 @@ hidden_dim = 32
 plot_avg_rewards, weights = deep_q_learning(learning_rate, gamma, episodes, hidden_dim)
 
 # Save the trained weights
-torch.save(weights, 'dqn_weights.pth')
+torch.save(weights, 'weights/dqn_weights.pth')
 print("Trained weights saved to 'dqn_weights.pth'")
