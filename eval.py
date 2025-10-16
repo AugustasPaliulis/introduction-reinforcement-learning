@@ -1,42 +1,32 @@
 """
-Strategy Evaluation Script
-=========================
-This script evaluates how well the Prioritized Experience Replay (PER) strategy works
-by testing the trained model across different CartPole pole lengths and comparing against baselines.
-
-Key Questions Answered:
-1. How does performance vary across pole lengths?
-2. How much better is PER compared to random/untrained performance?
-3. What's the improvement over standard uniform replay?
-
-Results are shown with clear plots and simple explanations.
+Model Evaluation Script
+Evaluates trained DQN models on CartPole with varying pole lengths
 """
 
 import torch
-import torch.nn as nn
 import numpy as np
 import gymnasium as gym
 import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
 from test_script import QNetwork
 import os
 
 
 def load_trained_model(weights_path='dqn_weights.pth'):
-    """Load the trained model weights"""
+    """Load trained model from checkpoint"""
+    # Check both current directory and weights subdirectory
     if not os.path.exists(weights_path):
-        raise FileNotFoundError(f"Trained weights not found at {weights_path}")
+        weights_in_dir = os.path.join('weights', weights_path)
+        if os.path.exists(weights_in_dir):
+            weights_path = weights_in_dir
+        else:
+            raise FileNotFoundError(f"Could not find weights at {weights_path}")
     
-    # Create model architecture
     env = gym.make('CartPole-v1')
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     env.close()
     
     model = QNetwork(state_dim, action_dim)
-    
-    # Load weights correctly
     state_dict = torch.load(weights_path, map_location='cpu')
     model.load_state_dict(state_dict)
     model.eval()
@@ -45,7 +35,7 @@ def load_trained_model(weights_path='dqn_weights.pth'):
 
 
 def test_on_pole_length(model, pole_length, num_episodes=10, max_steps=500):
-    """Test a model on a specific pole length"""
+    """Test model on specific pole length"""
     env = gym.make('CartPole-v1')
     env.unwrapped.length = pole_length
     
@@ -57,7 +47,6 @@ def test_on_pole_length(model, pole_length, num_episodes=10, max_steps=500):
         total_reward = 0
         
         for step in range(max_steps):
-            # Use trained model for action selection
             with torch.no_grad():
                 q_values = model(state)
                 action = q_values.argmax().item()
@@ -78,7 +67,7 @@ def test_on_pole_length(model, pole_length, num_episodes=10, max_steps=500):
 
 
 def test_random_policy(pole_length, num_episodes=10, max_steps=500):
-    """Test random policy baseline on a specific pole length"""
+    """Test random baseline on specific pole length"""
     env = gym.make('CartPole-v1')
     env.unwrapped.length = pole_length
     
@@ -89,7 +78,7 @@ def test_random_policy(pole_length, num_episodes=10, max_steps=500):
         total_reward = 0
         
         for step in range(max_steps):
-            action = env.action_space.sample()  # Random action
+            action = env.action_space.sample()
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
             
@@ -104,26 +93,25 @@ def test_random_policy(pole_length, num_episodes=10, max_steps=500):
     return episode_rewards
 
 
-def evaluate_strategy():
-    """Main evaluation function"""
-    print("🚀 Evaluating Prioritized Experience Replay Strategy")
+def evaluate_strategy(weights_path='dqn_weights.pth', method_name='Trained Model'):
+    """Evaluate model across different pole lengths"""
+    print(f"Evaluating {method_name}")
     print("=" * 60)
     
-    # Load trained model
+    # Load model
     try:
-        trained_model = load_trained_model()
-        print("✅ Successfully loaded trained model")
+        trained_model = load_trained_model(weights_path)
+        print(f"Loaded model from {weights_path}")
     except FileNotFoundError as e:
-        print(f"❌ {e}")
-        print("Please run train_script.py first to generate trained weights")
+        print(f"Error: {e}")
+        print("Run training script first to generate weights")
         return
     
-    # Test across different pole lengths
-    pole_lengths = np.linspace(0.4, 1.8, 15)  # More detailed sweep than training
+    # Test across pole lengths
+    pole_lengths = np.linspace(0.4, 1.8, 15)
     num_test_episodes = 10
     
-    print(f"🧪 Testing across {len(pole_lengths)} different pole lengths...")
-    print(f"📊 Running {num_test_episodes} episodes per length for statistical reliability")
+    print(f"Testing {len(pole_lengths)} different pole lengths ({num_test_episodes} episodes each)")
     
     results = {
         'pole_length': [],
@@ -137,20 +125,16 @@ def evaluate_strategy():
     for i, pole_len in enumerate(pole_lengths):
         print(f"Testing pole length {pole_len:.2f} ({i+1}/{len(pole_lengths)})")
         
-        # Test trained model
         trained_scores = test_on_pole_length(trained_model, pole_len, num_test_episodes)
         trained_mean = np.mean(trained_scores)
         trained_std = np.std(trained_scores)
         
-        # Test random baseline
         random_scores = test_random_policy(pole_len, num_test_episodes)
         random_mean = np.mean(random_scores)
         random_std = np.std(random_scores)
         
-        # Calculate improvement
-        improvement = trained_mean / max(random_mean, 1.0)  # Avoid division by zero
+        improvement = trained_mean / max(random_mean, 1.0)
         
-        # Store results
         results['pole_length'].append(pole_len)
         results['trained_mean'].append(trained_mean)
         results['trained_std'].append(trained_std)
@@ -158,71 +142,69 @@ def evaluate_strategy():
         results['random_std'].append(random_std)
         results['improvement_ratio'].append(improvement)
     
-    # Create visualizations
-    create_evaluation_plots(results)
-    
-    # Print summary
-    print_evaluation_summary(results)
+    create_evaluation_plots(results, method_name)
+    print_evaluation_summary(results, method_name)
     
     return results
 
 
-def create_evaluation_plots(results):
-    """Create clear evaluation plots"""
-    plt.style.use('default')
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+def create_evaluation_plots(results, method_name='Trained Model'):
+    """Generate evaluation plots"""
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
     pole_lengths = results['pole_length']
     
-    # Plot 1: Performance comparison
-    ax1.errorbar(pole_lengths, results['trained_mean'], yerr=results['trained_std'], 
-                label='Trained (PER)', marker='o', linewidth=2, capsize=5)
-    ax1.errorbar(pole_lengths, results['random_mean'], yerr=results['random_std'], 
-                label='Random Baseline', marker='s', linewidth=2, capsize=5)
-    ax1.set_xlabel('Pole Length')
-    ax1.set_ylabel('Average Episode Length')
-    ax1.set_title('Performance Across Pole Lengths')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
+    # Performance comparison
+    axes[0, 0].errorbar(pole_lengths, results['trained_mean'], yerr=results['trained_std'], 
+                        label=method_name, marker='o', capsize=4, linewidth=2)
+    axes[0, 0].errorbar(pole_lengths, results['random_mean'], yerr=results['random_std'], 
+                        label='Random', marker='s', capsize=4, linewidth=2, alpha=0.7)
+    axes[0, 0].set_xlabel('Pole Length')
+    axes[0, 0].set_ylabel('Episode Length')
+    axes[0, 0].set_title('Performance Across Pole Lengths')
+    axes[0, 0].legend()
+    axes[0, 0].grid(alpha=0.3)
     
-    # Plot 2: Improvement ratio
-    ax2.plot(pole_lengths, results['improvement_ratio'], 'g-o', linewidth=2)
-    ax2.axhline(y=1.0, color='r', linestyle='--', alpha=0.5, label='No improvement')
-    ax2.set_xlabel('Pole Length')
-    ax2.set_ylabel('Improvement Ratio (Trained/Random)')
-    ax2.set_title('How Much Better is PER vs Random?')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+    # Improvement ratio
+    axes[0, 1].plot(pole_lengths, results['improvement_ratio'], 'g-o', linewidth=2)
+    axes[0, 1].axhline(y=1.0, color='r', linestyle='--', alpha=0.5)
+    axes[0, 1].set_xlabel('Pole Length')
+    axes[0, 1].set_ylabel('Improvement Ratio')
+    axes[0, 1].set_title('Trained vs Random Performance')
+    axes[0, 1].grid(alpha=0.3)
     
-    # Plot 3: Difficulty analysis
-    ax3.plot(pole_lengths, results['random_mean'], 'r-s', label='Random (baseline difficulty)')
-    ax3.set_xlabel('Pole Length')
-    ax3.set_ylabel('Random Policy Score')
-    ax3.set_title('Task Difficulty by Pole Length')
-    ax3.legend()
-    ax3.grid(True, alpha=0.3)
+    # Performance bars
+    x = np.arange(len(pole_lengths))
+    width = 0.35
+    axes[1, 0].bar(x - width/2, results['trained_mean'], width, label=method_name, alpha=0.8)
+    axes[1, 0].bar(x + width/2, results['random_mean'], width, label='Random', alpha=0.8)
+    axes[1, 0].set_xlabel('Pole Length Index')
+    axes[1, 0].set_ylabel('Episode Length')
+    axes[1, 0].set_title('Performance Comparison (Bar Chart)')
+    axes[1, 0].legend()
+    axes[1, 0].grid(alpha=0.3, axis='y')
     
-    # Plot 4: Strategy effectiveness heatmap
-    effectiveness = np.array(results['improvement_ratio']).reshape(1, -1)
-    im = ax4.imshow(effectiveness, aspect='auto', cmap='RdYlGn', vmin=1.0, vmax=max(results['improvement_ratio']))
-    ax4.set_title('Strategy Effectiveness Heatmap')
-    ax4.set_xlabel('Pole Length Index')
-    ax4.set_yticks([])
-    
-    # Add colorbar
-    cbar = plt.colorbar(im, ax=ax4)
-    cbar.set_label('Improvement Ratio')
+    # Scatter plot
+    axes[1, 1].scatter(results['random_mean'], results['trained_mean'], s=80, alpha=0.6)
+    max_val = max(max(results['random_mean']), max(results['trained_mean']))
+    axes[1, 1].plot([0, max_val], [0, max_val], 'r--', alpha=0.5, label='Equal performance')
+    axes[1, 1].set_xlabel('Random Performance')
+    axes[1, 1].set_ylabel('Trained Performance')
+    axes[1, 1].set_title('Trained vs Random (Scatter)')
+    axes[1, 1].legend()
+    axes[1, 1].grid(alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('strategy_evaluation.png', dpi=300, bbox_inches='tight')
-    print("📈 Evaluation plots saved as 'strategy_evaluation.png'")
-    plt.show()
+    filename = f"{method_name.lower().replace(' ', '_')}_evaluation.png"
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    print(f"Plots saved as '{filename}'")
+    plt.close()
 
 
-def print_evaluation_summary(results):
-    """Print a clear summary of results"""
+def print_evaluation_summary(results, method_name='Trained Model'):
+    """Print evaluation summary"""
     print("\n" + "="*60)
-    print("📋 STRATEGY EVALUATION SUMMARY")
+    print(f"EVALUATION SUMMARY: {method_name}")
     print("="*60)
     
     # Overall performance
@@ -230,27 +212,26 @@ def print_evaluation_summary(results):
     overall_random = np.mean(results['random_mean'])
     overall_improvement = overall_trained / overall_random
     
-    print(f"🎯 Overall Performance:")
-    print(f"   Trained Model (PER):  {overall_trained:.1f} ± {np.mean(results['trained_std']):.1f}")
-    print(f"   Random Baseline:      {overall_random:.1f} ± {np.mean(results['random_std']):.1f}")
-    print(f"   Overall Improvement:  {overall_improvement:.1f}x better")
+    print(f"\nOverall Performance:")
+    print(f"  {method_name}: {overall_trained:.1f} +/- {np.mean(results['trained_std']):.1f}")
+    print(f"  Random Baseline: {overall_random:.1f} +/- {np.mean(results['random_std']):.1f}")
+    print(f"  Improvement: {overall_improvement:.1f}x better than random")
     
-    # Best and worst performance
+    # Best and worst
     best_idx = np.argmax(results['improvement_ratio'])
     worst_idx = np.argmin(results['improvement_ratio'])
     
-    print(f"\n🏆 Best Performance:")
-    print(f"   Pole Length: {results['pole_length'][best_idx]:.2f}")
-    print(f"   Improvement: {results['improvement_ratio'][best_idx]:.1f}x better than random")
+    print(f"\nBest Performance:")
+    print(f"  Pole length {results['pole_length'][best_idx]:.2f}")
+    print(f"  {results['improvement_ratio'][best_idx]:.1f}x better than random")
     
-    print(f"\n⚠️  Most Challenging:")
-    print(f"   Pole Length: {results['pole_length'][worst_idx]:.2f}")
-    print(f"   Improvement: {results['improvement_ratio'][worst_idx]:.1f}x better than random")
+    print(f"\nMost Challenging:")
+    print(f"  Pole length {results['pole_length'][worst_idx]:.2f}")
+    print(f"  {results['improvement_ratio'][worst_idx]:.1f}x better than random")
     
-    # Strategy insights
-    print(f"\n🧠 Strategy Insights:")
+    # Performance analysis
+    print(f"\nStrategy Insights:")
     
-    # Check if longer poles show better improvement
     short_poles = [i for i, length in enumerate(results['pole_length']) if length < 1.0]
     long_poles = [i for i, length in enumerate(results['pole_length']) if length > 1.4]
     
@@ -259,45 +240,30 @@ def print_evaluation_summary(results):
         long_improvement = np.mean([results['improvement_ratio'][i] for i in long_poles])
         
         if long_improvement > short_improvement:
-            print(f"   ✅ Strategy works better on longer poles ({long_improvement:.1f}x vs {short_improvement:.1f}x)")
-            print(f"      This suggests reward scaling helped focus learning on harder tasks!")
+            print(f"  - Better on longer poles ({long_improvement:.1f}x vs {short_improvement:.1f}x)")
+            print(f"    Suggests the model handles harder tasks well")
         else:
-            print(f"   📊 Strategy works better on shorter poles ({short_improvement:.1f}x vs {long_improvement:.1f}x)")
+            print(f"  - Better on shorter poles ({short_improvement:.1f}x vs {long_improvement:.1f}x)")
+            print(f"    Performance decreases with task difficulty")
     
-    # Check consistency
     improvement_std = np.std(results['improvement_ratio'])
     if improvement_std < 0.5:
-        print(f"   ✅ Consistent performance across pole lengths (std: {improvement_std:.2f})")
+        print(f"  - Consistent across pole lengths (std: {improvement_std:.2f})")
     else:
-        print(f"   ⚠️  Variable performance across pole lengths (std: {improvement_std:.2f})")
-    
-    print(f"\n💡 What This Means:")
-    print(f"   • Your Prioritized Experience Replay strategy is working!")
-    print(f"   • The agent learned to balance poles {overall_improvement:.1f}x better than random")
-    print(f"   • Training on multiple pole lengths improved generalization")
-    print(f"   • Reward scaling helped the agent focus on harder scenarios")
+        print(f"  - Variable across pole lengths (std: {improvement_std:.2f})")
     
     print("="*60)
 
 
 if __name__ == "__main__":
-    evaluate_strategy()
-
-"""Key Findings:
-
-8.0x better than random - Your trained model dramatically outperforms random actions
-Consistent learning - Average performance of 276 vs 35 for random policy
-Best on short poles - 30.3x improvement on easier tasks, 3.5x on hardest
-Good generalization - Works across all pole lengths from 0.4 to 1.8
-
-
-What the plots show:
-
-Performance drops as pole length increases (expected - longer poles are harder)
-Your model maintains good performance even on challenging longer poles
-The improvement ratio varies but stays well above 1.0 everywhere
-Strategy effectiveness heatmap shows consistent learning across the range
-
-
-
-"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Evaluate trained DQN models')
+    parser.add_argument('--weights', type=str, default='dqn_weights.pth',
+                       help='Path to model weights')
+    parser.add_argument('--method', type=str, default='Trained Model',
+                       help='Method name for plots')
+    
+    args = parser.parse_args()
+    
+    evaluate_strategy(weights_path=args.weights, method_name=args.method)
