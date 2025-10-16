@@ -1,13 +1,15 @@
 """
-Baseline DQN Implementation
-============================
-Standard DQN with:
+Adaptive Epsilon DQN Implementation
+====================================
+DQN with adaptive epsilon-greedy exploration:
+- Epsilon adjusts based on recent reward performance
+- High rewards -> lower epsilon (more exploitation)
+- Low rewards -> higher epsilon (more exploration)
 - Uniform random replay buffer (no prioritization)
-- Epsilon-greedy exploration with decay
 - Target network (periodic updates)
 - Training across multiple pole lengths (for generalization)
 
-This serves as the baseline for comparison with advanced methods.
+This implements reward-adaptive exploration strategy.
 """
 
 import torch
@@ -110,10 +112,10 @@ def train_baseline_dqn(learning_rate=0.01, gamma=0.99, episodes=500,
         (plot_avg_rewards, q_network.state_dict(), episode_rewards)
     """
     print("="*60)
-    print("BASELINE DQN TRAINING")
+    print("ADAPTIVE EPSILON DQN TRAINING")
     print("="*60)
     print("Configuration:")
-    print(f"  Method: Standard DQN (Uniform Replay)")
+    print(f"  Method: DQN with Adaptive Epsilon")
     print(f"  Episodes: {episodes}")
     print(f"  Buffer Capacity: {buffer_capacity}")
     print(f"  Batch Size: {batch_size}")
@@ -124,6 +126,7 @@ def train_baseline_dqn(learning_rate=0.01, gamma=0.99, episodes=500,
     
     # Initialize environment and networks
     env = gym.make('CartPole-v1')
+    env._max_episode_steps = 1000
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     
@@ -138,7 +141,11 @@ def train_baseline_dqn(learning_rate=0.01, gamma=0.99, episodes=500,
     
     # Exploration schedule
     epsilon = epsilon_start
-    
+    # For adaptive epsilon based on performance
+    reward_window = 50  # Window size for computing average reward
+    target_reward = 70  # CartPole-v1 target reward (adjust as needed)
+    epsilon_adjustment_rate = 0.05  # How fast epsilon adjusts to performance
+
     # Training tracking
     episode_rewards = []
     plot_avg_rewards = []
@@ -184,10 +191,28 @@ def train_baseline_dqn(learning_rate=0.01, gamma=0.99, episodes=500,
         
         episode_rewards.append(episode_reward)
         
-        # Decay epsilon
-        if epsilon > epsilon_min:
-            epsilon *= epsilon_decay
-        
+        # Adaptive epsilon based on recent performance
+        if len(episode_rewards) >= reward_window:
+            # Compute moving average reward
+            avg_recent_reward = np.mean(episode_rewards[-reward_window:])
+
+            # Normalize performance (0 to 1 scale, where 1 = target achieved)
+            performance_ratio = min(avg_recent_reward / target_reward, 1.0)
+
+            # Target epsilon based on performance (high reward -> low epsilon)
+            target_epsilon = epsilon_min + (epsilon_start - epsilon_min) * (1 - performance_ratio)
+
+            # Smoothly adjust epsilon towards target
+            epsilon = epsilon + epsilon_adjustment_rate * (target_epsilon - epsilon)
+        else:
+            # Early episodes: gradual initial decay to build up replay buffer
+            # This ensures some exploration before adaptive mechanism kicks in
+            initial_decay_progress = len(episode_rewards) / reward_window
+            epsilon = epsilon_start - (epsilon_start - 0.5) * initial_decay_progress
+
+        # Clamp epsilon to valid range
+        epsilon = max(epsilon_min, min(epsilon_start, epsilon))
+
         # Update target network periodically
         if episode % target_update_freq == 0:
             target_network.load_state_dict(q_network.state_dict())
@@ -209,7 +234,7 @@ def train_baseline_dqn(learning_rate=0.01, gamma=0.99, episodes=500,
 
 
 if __name__ == "__main__":
-    # Train baseline
+    # Train with adaptive epsilon
     plot_avg_rewards, weights, episode_rewards = train_baseline_dqn(
         learning_rate=0.01,
         gamma=0.99,
@@ -223,20 +248,20 @@ if __name__ == "__main__":
         episode_rewards=episode_rewards,
         plot_avg_rewards=plot_avg_rewards,
         weights=weights,
-        method_name="baseline",
+        method_name="adaptive_epsilon",
         weights_dir="weights"
     )
     
     # Compute and print statistics
-    stats = compute_training_stats(episode_rewards, method_name="Baseline DQN")
-    
+    stats = compute_training_stats(episode_rewards, method_name="Adaptive Epsilon DQN")
+
     # Plot training curve
     plot_training_curve(
         plot_avg_rewards=plot_avg_rewards,
-        method_name="Baseline DQN",
-        save_path="results/baseline_random_poles/baseline_training_curve.png"
+        method_name="Adaptive Epsilon DQN",
+        save_path="results/adaptive_epsilon/adaptive_epsilon_training_curve.png"
     )
     
-    print("\nBaseline training completed")
+    print("\nAdaptive epsilon training completed")
     print("\nResults saved in weights/ directory")
-    print("\nTraining curve saved as baseline_training_curve.png")
+    print("\nTraining curve saved as adaptive_epsilon_training_curve.png")
