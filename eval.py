@@ -1,14 +1,10 @@
-"""
-Model Evaluation Script
-Evaluates trained DQN models on CartPole with varying pole lengths
-"""
-
 import torch
 import numpy as np
 import gymnasium as gym
 import matplotlib.pyplot as plt
 from test_script import QNetwork
 import os
+import scipy.stats as stats
 
 
 def load_trained_model(weights_path='dqn_weights.pth'):
@@ -20,17 +16,17 @@ def load_trained_model(weights_path='dqn_weights.pth'):
             weights_path = weights_in_dir
         else:
             raise FileNotFoundError(f"Could not find weights at {weights_path}")
-    
+
     env = gym.make('CartPole-v1')
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     env.close()
-    
+
     model = QNetwork(state_dim, action_dim)
     state_dict = torch.load(weights_path, map_location='cpu')
     model.load_state_dict(state_dict)
     model.eval()
-    
+
     return model
 
 
@@ -38,36 +34,36 @@ def test_on_pole_length(model, pole_length, num_episodes=10, max_steps=500):
     """Test model on specific pole length"""
     env = gym.make('CartPole-v1')
     env.unwrapped.length = pole_length
-    
+
     episode_rewards = []
-    
+
     for episode in range(num_episodes):
         state, _ = env.reset()
         state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
         total_reward = 0
-        
+
         for step in range(max_steps):
             with torch.no_grad():
                 q_values = model(state)
                 action = q_values.argmax().item()
-            
+
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
-            
+
             if done:
                 break
-                
+
             state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
             total_reward += reward
-        
+
         episode_rewards.append(total_reward)
-    
+
     env.close()
     return episode_rewards
 
 
 def evaluate_strategy(weights_path='dqn_weights.pth', baseline_weights_path='baseline_weights.pth', method_name='Trained Model'):
-    """Evaluate model across different pole lengths against a baseline model"""
+    """Evaluate model across different pole lengths against a baseline model with statistical testing"""
     print(f"Evaluating {method_name} against Baseline Model")
     print("=" * 60)
 
@@ -100,7 +96,9 @@ def evaluate_strategy(weights_path='dqn_weights.pth', baseline_weights_path='bas
         'trained_std': [],
         'baseline_mean': [],
         'baseline_std': [],
-        'improvement_ratio': []
+        'improvement_ratio': [],
+        'trained_scores': [],  # Store all trained scores
+        'baseline_scores': []   # Store all baseline scores
     }
 
     for i, pole_len in enumerate(pole_lengths):
@@ -122,6 +120,8 @@ def evaluate_strategy(weights_path='dqn_weights.pth', baseline_weights_path='bas
         results['baseline_mean'].append(baseline_mean)
         results['baseline_std'].append(baseline_std)
         results['improvement_ratio'].append(improvement)
+        results['trained_scores'].extend(trained_scores)  # Append scores
+        results['baseline_scores'].extend(baseline_scores)   # Append scores
 
     create_evaluation_plots(results, method_name)
     print_evaluation_summary(results, method_name)
@@ -131,49 +131,28 @@ def evaluate_strategy(weights_path='dqn_weights.pth', baseline_weights_path='bas
 
 def create_evaluation_plots(results, method_name='Trained Model'):
     """Generate evaluation plots"""
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))  # Adjusted for 2 subplots
 
     pole_lengths = results['pole_length']
 
     # Performance comparison
-    axes[0, 0].errorbar(pole_lengths, results['trained_mean'], yerr=results['trained_std'],
+    axes[0].errorbar(pole_lengths, results['trained_mean'], yerr=results['trained_std'],
                         label=method_name, marker='o', capsize=4, linewidth=2)
-    axes[0, 0].errorbar(pole_lengths, results['baseline_mean'], yerr=results['baseline_std'],
+    axes[0].errorbar(pole_lengths, results['baseline_mean'], yerr=results['baseline_std'],
                         label='Baseline', marker='s', capsize=4, linewidth=2, alpha=0.7)
-    axes[0, 0].set_xlabel('Pole Length')
-    axes[0, 0].set_ylabel('Episode Length')
-    axes[0, 0].set_title('Performance Across Pole Lengths')
-    axes[0, 0].legend()
-    axes[0, 0].grid(alpha=0.3)
+    axes[0].set_xlabel('Pole Length')
+    axes[0].set_ylabel('Episode Length')
+    axes[0].set_title('Performance Across Pole Lengths')
+    axes[0].legend()
+    axes[0].grid(alpha=0.3)
 
     # Improvement ratio
-    axes[0, 1].plot(pole_lengths, results['improvement_ratio'], 'g-o', linewidth=2)
-    axes[0, 1].axhline(y=1.0, color='r', linestyle='--', alpha=0.5)
-    axes[0, 1].set_xlabel('Pole Length')
-    axes[0, 1].set_ylabel('Improvement Ratio')
-    axes[0, 1].set_title('Trained vs Baseline Performance')
-    axes[0, 1].grid(alpha=0.3)
-
-    # Performance bars
-    x = np.arange(len(pole_lengths))
-    width = 0.35
-    axes[1, 0].bar(x - width/2, results['trained_mean'], width, label=method_name, alpha=0.8)
-    axes[1, 0].bar(x + width/2, results['baseline_mean'], width, label='Baseline', alpha=0.8)
-    axes[1, 0].set_xlabel('Pole Length Index')
-    axes[1, 0].set_ylabel('Episode Length')
-    axes[1, 0].set_title('Performance Comparison (Bar Chart)')
-    axes[1, 0].legend()
-    axes[1, 0].grid(alpha=0.3, axis='y')
-
-    # Scatter plot
-    axes[1, 1].scatter(results['baseline_mean'], results['trained_mean'], s=80, alpha=0.6)
-    max_val = max(max(results['baseline_mean']), max(results['trained_mean']))
-    axes[1, 1].plot([0, max_val], [0, max_val], 'r--', alpha=0.5, label='Equal performance')
-    axes[1, 1].set_xlabel('Baseline Performance')
-    axes[1, 1].set_ylabel('Trained Performance')
-    axes[1, 1].set_title('Trained vs Baseline (Scatter)')
-    axes[1, 1].legend()
-    axes[1, 1].grid(alpha=0.3)
+    axes[1].plot(pole_lengths, results['improvement_ratio'], 'g-o', linewidth=2)
+    axes[1].axhline(y=1.0, color='r', linestyle='--', alpha=0.5)
+    axes[1].set_xlabel('Pole Length')
+    axes[1].set_ylabel('Improvement Ratio')
+    axes[1].set_title('Trained vs Baseline Performance')
+    axes[1].grid(alpha=0.3)
 
     plt.tight_layout()
     filename = f"{method_name.lower().replace(' ', '_')}_evaluation.png"
@@ -197,6 +176,18 @@ def print_evaluation_summary(results, method_name='Trained Model'):
     print(f"  {method_name}: {overall_trained:.1f} +/- {np.mean(results['trained_std']):.1f}")
     print(f"  Baseline Model: {overall_baseline:.1f} +/- {np.mean(results['baseline_std']):.1f}")
     print(f"  Improvement: {overall_improvement:.1f}x better than baseline")
+
+    # Statistical significance (overall)
+    trained_scores = results['trained_scores']
+    baseline_scores = results['baseline_scores']
+    t_statistic, p_value = stats.ttest_ind(trained_scores, baseline_scores)
+
+    print(f"\nOverall Statistical Significance:")
+    print(f"  P-value: {p_value:.10f}")
+    if p_value < 0.05:
+        print("  The difference is statistically significant (p < 0.05)")
+    else:
+        print("  The difference is not statistically significant (p >= 0.05)")
 
     # Best and worst
     best_idx = np.argmax(results['improvement_ratio'])
@@ -238,12 +229,12 @@ def print_evaluation_summary(results, method_name='Trained Model'):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Compare reward scaling strategy against a baseline')
-    parser.add_argument('--weights', type=str, default='reward_scaling_weights.pth',
+    parser = argparse.ArgumentParser(description='Compare adaptive epsilon strategy against a baseline')
+    parser.add_argument('--weights', type=str, default='adaptive_epsilon_weights.pth',
                        help='Path to model weights')
     parser.add_argument('--baseline_weights', type=str, default='baseline_weights.pth',
                        help='Path to baseline model weights')
-    parser.add_argument('--method', type=str, default='Reward scaling buffer strategy',
+    parser.add_argument('--method', type=str, default='Adaptive epsilon strategy',
                        help='Method name for plots')
 
     args = parser.parse_args()
