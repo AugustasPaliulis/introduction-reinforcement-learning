@@ -1,10 +1,15 @@
+
 Overall Performance:
-  Reward scaling buffer strategy: 86.4 +/- 5.0
-  Baseline Model: 81.3 +/- 19.0
+  Reward scaling strategy: 85.9 +/- 5.4
+  Baseline Model: 78.0 +/- 22.7
   Improvement: 1.1x better than baseline
 
+Overall Statistical Significance:
+  P-value: 0.0017430721
+  The difference is statistically significant (p < 0.05)
+
 Best Performance:
-  Pole length 1.70
+  Pole length 1.50
   1.7x better than baseline
 
 Most Challenging:
@@ -12,6 +17,6 @@ Most Challenging:
   0.8x better than baseline
 
 Strategy Insights:
-  - Better on longer poles (1.4x vs 0.8x)
+  - Better on longer poles (1.4x vs 0.9x)
     Suggests the model handles harder tasks well
-  - Consistent across pole lengths (std: 0.29)
+  - Consistent across pole lengths (std: 0.27)
