@@ -301,7 +301,7 @@ if __name__ == "__main__":
     plot_training_curve(
         plot_avg_rewards=plot_avg_rewards,
         method_name="Prioritized DQN",
-        save_path="prioritized_training_curve.png"
+        save_path="results/prioritized_buffer/prioritized_training_curve.png"
     )
     
     print("\nPrioritized DQN training completed")

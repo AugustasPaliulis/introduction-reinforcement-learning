@@ -44,7 +44,7 @@ def bar_plot(results):
     plt.ylabel('Episode length')
     plt.title(f'Average score over all pole lengths = {round(overall_avg, 0)}')
 
-    plt.savefig("adaptive_epsilon_bar_plot.png")
+    plt.savefig("prioritized_replay_buffer.png")
     plt.show()
 
 
@@ -91,7 +91,7 @@ def test_script():
     all_results = []
 
     # import here your trained neural network
-    trained_nn = 'adaptive_epsilon_weights.pth'
+    trained_nn = 'prioritized_weights.pth'
 
     results = {}
     total_score = 0
@@ -131,7 +131,7 @@ def test_script():
 
     # Convert list to DataFrame
     df = pd.DataFrame(all_results)
-    df.to_excel("results/reward_scaling/experiment_results.xlsx", index=False)
+    df.to_excel("experiment_results.xlsx", index=False)
 
 if __name__ == "__main__":
     test_script()

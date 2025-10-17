@@ -259,7 +259,7 @@ if __name__ == "__main__":
     plot_training_curve(
         plot_avg_rewards=plot_avg_rewards,
         method_name="Adaptive Epsilon DQN",
-        save_path="results/adaptive_epsilon_new/adaptive_epsilon_training_curve.png"
+        save_path="results/adaptive_epsilon_extreme/adaptive_epsilon_training_curve.png"
     )
     
     print("\nAdaptive epsilon training completed")

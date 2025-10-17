@@ -1,0 +1,17 @@
+Overall Performance:
+  Adaptive epsilon strategy: 55.3 +/- 27.1
+  Baseline Model: 82.5 +/- 16.5
+  Improvement: 0.7x better than baseline
+
+Best Performance:
+  Pole length 0.50
+  1.0x better than baseline
+
+Most Challenging:
+  Pole length 1.30
+  0.4x better than baseline
+
+Strategy Insights:
+  - Better on shorter poles (0.9x vs 0.5x)
+    Performance decreases with task difficulty
+  - Consistent across pole lengths (std: 0.22)
