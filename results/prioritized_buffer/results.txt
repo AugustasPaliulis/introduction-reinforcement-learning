@@ -1,17 +1,21 @@
 Overall Performance:
-  Prioritized replay buffer strategy: 225.7 +/- 42.0
-  Baseline Model: 81.7 +/- 19.5
-  Improvement: 2.8x better than baseline
+  Prioritized replay buffer strategy: 214.8 +/- 37.0
+  Baseline Model: 78.5 +/- 19.5
+  Improvement: 2.7x better than baseline
+
+Overall Statistical Significance:
+  P-value: 0.0000000000
+  The difference is statistically significant (p < 0.05)
 
 Best Performance:
-  Pole length 0.40
-  4.2x better than baseline
+  Pole length 0.50
+  4.3x better than baseline
 
 Most Challenging:
-  Pole length 1.40
-  1.7x better than baseline
+  Pole length 1.20
+  1.6x better than baseline
 
 Strategy Insights:
-  - Better on shorter poles (3.6x vs 2.1x)
+  - Better on shorter poles (3.4x vs 2.2x)
     Performance decreases with task difficulty
-  - Variable across pole lengths (std: 0.89)
+  - Variable across pole lengths (std: 0.74)

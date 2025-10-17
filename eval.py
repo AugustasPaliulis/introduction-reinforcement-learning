@@ -229,12 +229,12 @@ def print_evaluation_summary(results, method_name='Trained Model'):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Compare adaptive epsilon strategy against a baseline')
-    parser.add_argument('--weights', type=str, default='adaptive_epsilon_weights.pth',
+    parser = argparse.ArgumentParser(description='Compare prioritized replay buffer strategy against a baseline')
+    parser.add_argument('--weights', type=str, default='prioritized_weights.pth',
                        help='Path to model weights')
     parser.add_argument('--baseline_weights', type=str, default='baseline_weights.pth',
                        help='Path to baseline model weights')
-    parser.add_argument('--method', type=str, default='Adaptive epsilon strategy',
+    parser.add_argument('--method', type=str, default='Prioritized replay buffer strategy',
                        help='Method name for plots')
 
     args = parser.parse_args()
