@@ -11,7 +11,7 @@ def load_trained_model(weights_path='dqn_weights.pth'):
     """Load trained model from checkpoint"""
     # Check both current directory and weights subdirectory
     if not os.path.exists(weights_path):
-        weights_in_dir = os.path.join('weights', weights_path)
+        weights_in_dir = os.path.join('../weights', weights_path)
         if os.path.exists(weights_in_dir):
             weights_path = weights_in_dir
         else:

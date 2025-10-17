@@ -15,15 +15,13 @@ Laslty, It uses importance weights to fix the bias caused by sampling some exper
 """
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import gymnasium as gym
 import random
-from collections import deque
 
 from test_script import QNetwork
-from utils import save_training_results, plot_training_curve, compute_training_stats
+from utils.utils import save_training_results, plot_training_curve, compute_training_stats
 
 
 class PrioritizedReplayBuffer:
@@ -291,7 +289,7 @@ if __name__ == "__main__":
         plot_avg_rewards=plot_avg_rewards,
         weights=weights,
         method_name="prioritized",
-        weights_dir="weights"
+        weights_dir="../weights"
     )
     
     # Compute and print statistics
@@ -301,7 +299,7 @@ if __name__ == "__main__":
     plot_training_curve(
         plot_avg_rewards=plot_avg_rewards,
         method_name="Prioritized DQN",
-        save_path="results/prioritized_buffer/prioritized_training_curve.png"
+        save_path="../results/prioritized_buffer/prioritized_training_curve.png"
     )
     
     print("\nPrioritized DQN training completed")

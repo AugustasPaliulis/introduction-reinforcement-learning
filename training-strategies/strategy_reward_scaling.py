@@ -14,7 +14,7 @@ import random
 from collections import deque
 
 from test_script import QNetwork
-from utils import save_training_results, plot_training_curve, compute_training_stats
+from utils.utils import save_training_results, plot_training_curve, compute_training_stats
 
 
 class UniformReplayBuffer:
@@ -334,7 +334,7 @@ if __name__ == "__main__":
         plot_avg_rewards=plot_avg_rewards,
         weights=weights,
         method_name="strategy_reward_scaling",  # i changed it to reward scaling from baseline
-        weights_dir="weights"
+        weights_dir="../weights"
     )
     
     # Compute and print statistics
@@ -345,5 +345,5 @@ if __name__ == "__main__":
     plot_training_curve(
         plot_avg_rewards=plot_avg_rewards,
         method_name="Reward Scaling Strategy",
-        save_path="results/reward_scaling_result/reward_scaling_strategy_training_curve.png"
+        save_path="../results/reward_scaling_result/reward_scaling_strategy_training_curve.png"
     )
